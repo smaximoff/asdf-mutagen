@@ -2,7 +2,6 @@
 
 set -euo pipefail
 
-# TODO: Ensure this is the correct GitHub homepage where releases can be downloaded for mutagen.
 GH_REPO="https://github.com/mutagen-io/mutagen"
 TOOL_NAME="mutagen"
 TOOL_TEST="mutagen --version"
@@ -14,10 +13,35 @@ fail() {
 
 curl_opts=(-fsSL)
 
-# NOTE: You might want to remove this if mutagen is not hosted on GitHub releases.
 if [ -n "${GITHUB_API_TOKEN:-}" ]; then
 	curl_opts=("${curl_opts[@]}" -H "Authorization: token $GITHUB_API_TOKEN")
 fi
+
+get_platform() {
+	local -r kernel="$(uname -s)"
+	if [[ ${OSTYPE} == "msys" || ${kernel} == "CYGWIN"* || ${kernel} == "MINGW"* ]]; then
+		echo windows
+	else
+		uname | tr '[:upper:]' '[:lower:]'
+	fi
+}
+
+get_arch() {
+	local -r machine="$(uname -m)"
+	local -r arch_override="ASDF_MUTAGEN_ARCH_OVERRIDE"
+
+	if [[ -n ${!arch_override} ]]; then
+		echo "${!arch_override}"
+	elif [[ ${machine} == "arm64" ]] || [[ ${machine} == "aarch64" ]]; then
+		echo "arm64"
+	elif [[ ${machine} == *"arm"* ]] || [[ ${machine} == *"aarch"* ]]; then
+		echo "arm"
+	elif [[ ${machine} == *"386"* ]]; then
+		echo "386"
+	else
+		echo "amd64"
+	fi
+}
 
 sort_versions() {
 	sed 'h; s/[+-]/./g; s/.p\([[:digit:]]\)/.z\1/; s/$/.z/; G; s/\n/ /' |
@@ -31,18 +55,18 @@ list_github_tags() {
 }
 
 list_all_versions() {
-	# TODO: Adapt this. By default we simply list the tag names from GitHub releases.
-	# Change this function if mutagen has other means of determining installable versions.
 	list_github_tags
 }
 
 download_release() {
-	local version filename url
+	local version filename url platform arch
 	version="$1"
 	filename="$2"
+	platform=$(get_platform)
+	arch=$(get_arch)
 
-	# TODO: Adapt the release URL convention for mutagen
-	url="$GH_REPO/archive/v${version}.tar.gz"
+	url="$GH_REPO/releases/download/v${version}/mutagen_${platform}_${arch}_v${version}.tar.gz"
+	# https://github.com/mutagen-io/mutagen/releases/download/v0.17.2/mutagen_linux_amd64_v0.17.2.tar.gz
 
 	echo "* Downloading $TOOL_NAME release $version..."
 	curl "${curl_opts[@]}" -o "$filename" -C - "$url" || fail "Could not download $url"
