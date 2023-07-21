@@ -28,10 +28,9 @@ get_platform() {
 
 get_arch() {
 	local -r machine="$(uname -m)"
-	local -r arch_override="ASDF_MUTAGEN_ARCH_OVERRIDE"
 
-	if [[ -n ${!arch_override} ]]; then
-		echo "${!arch_override}"
+	if [[ -n ${ASDF_MUTAGEN_ARCH_OVERRIDE} ]]; then
+		echo ${ASDF_MUTAGEN_ARCH_OVERRIDE}
 	elif [[ ${machine} == "arm64" ]] || [[ ${machine} == "aarch64" ]]; then
 		echo "arm64"
 	elif [[ ${machine} == *"arm"* ]] || [[ ${machine} == *"aarch"* ]]; then
